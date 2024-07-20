@@ -54,7 +54,7 @@ function log_login($conn, $user_id) {
             text-align: right; /* راست چین کردن متن‌ها در کانتینر */
         }
         .card {
-            background-color: rgba(255, 255, 255, 0.8); /* تغییر opacity به 0.8 برای پس‌زمینه کارت */
+            background-color: rgba(255, 255, 255, 0.9); /* تغییر opacity به 0.8 برای پس‌زمینه کارت */
             border: none; /* حذف حاشیه‌ی کارت */
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* اضافه کردن سایه به کارت */
             text-align: right; /* راست چین کردن متن‌ها در کارت */
