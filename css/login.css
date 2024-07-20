@@ -1,0 +1,74 @@
+body {
+    font-family: 'Vazir', sans-serif; /* استفاده از فونت وزیر */
+    background-image: url('/img/laravel.jpg'); /* تصویر پس‌زمینه */
+    background-repeat: no-repeat;
+    background-size: cover;
+    color: #555; /* رنگ متون به رنگ خاکستری ملایم */
+}
+
+.container {
+    text-align: right; /* راست چین کردن متن‌ها در کانتینر */
+    margin-top: 100px; /* فاصله از بالا */
+}
+
+.card {
+    background-color: rgba(255, 255, 255, 0.9); /* تغییر opacity به 0.9 برای پس‌زمینه کارت */
+    border-radius: 15px; /* گرد کردن گوشه‌های کارت */
+    border: none; /* حذف حاشیه‌ی کارت */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* اضافه کردن سایه به کارت */
+    text-align: right; /* راست چین کردن متن‌ها در کارت */
+    padding: 20px; /* افزودن فاصله داخلی */
+}
+
+.card-header {
+    background-color: transparent; /* پس زمینه شفاف */
+    border-bottom: none; /* حذف حاشیه پایین */
+    text-align: center; /* وسط چین کردن عنوان هدر */
+    padding-bottom: 10px; /* افزودن فاصله پایین */
+}
+
+.card-header h3 {
+    font-weight: 700; /* افزایش ضخامت فونت */
+    color: #333; /* تغییر رنگ به خاکستری تیره */
+}
+
+.card-body {
+    padding-top: 0; /* حذف فاصله بالا */
+}
+
+.form-group {
+    margin-bottom: 15px; /* فاصله بین گروه‌های فرم */
+}
+
+.form-group label {
+    font-weight: 600; /* ضخیم‌تر کردن برچسب‌ها */
+    color: #333; /* تغییر رنگ به خاکستری تیره */
+}
+
+.form-control {
+    border-radius: 5px; /* گرد کردن گوشه‌های فیلدهای ورودی */
+    border: 1px solid #ddd; /* افزودن حاشیه خاکستری روشن */
+    padding: 10px; /* افزودن فاصله داخلی */
+}
+
+.btn-primary {
+    background-color: #8e44ad; /* رنگ بنفش ملایم */
+    border: none; /* حذف حاشیه دکمه */
+    border-radius: 5px; /* گرد کردن گوشه‌های دکمه */
+    padding: 10px 20px; /* افزودن فاصله داخلی */
+    font-weight: 600; /* افزایش ضخامت فونت */
+    transition: background-color 0.3s ease; /* افزودن انیمیشن تغییر رنگ */
+}
+
+.btn-primary:hover {
+    background-color: #732d91; /* رنگ بنفش تیره‌تر هنگام هاور */
+}
+
+.alert-danger {
+    background-color: #e74c3c; /* رنگ قرمز روشن برای اخطار */
+    border: none; /* حذف حاشیه اخطار */
+    color: #fff; /* رنگ سفید متن اخطار */
+    font-weight: 600; /* افزایش ضخامت متن اخطار */
+    text-align: center; /* وسط چین کردن متن اخطار */
+    border-radius: 5px; /* گرد کردن گوشه‌های اخطار */
+}
