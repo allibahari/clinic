@@ -1,5 +1,15 @@
 {
     "require": {
-        "melipayamak/php": "1.0.0"
+        "melipayamak/php": "1.0.0",
+        "morilog/jalali": "^3.4",
+        "tecnickcom/tcpdf": "^6.10",
+        "google/apiclient": "^2.0",
+        "gemini-api-php/client": "^1.7",
+        "google/auth": "^1.47"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
     }
 }

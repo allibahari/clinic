@@ -5,7 +5,7 @@ if (isset($_GET['id'])) {
     $id = $_GET['id'];
 
     // Prepare the SQL statement to delete a user with the given ID
-    $sql = "DELETE FROM employees1 WHERE id = ?";
+    $sql = "DELETE FROM employees WHERE id = ?";
     
     // Prepare and bind the statement
     $stmt = $conn->prepare($sql);

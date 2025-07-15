@@ -1,0 +1,25 @@
+# ----------------------------------------------------
+# 🛡️ تنظیم متغیرهای محیطی سرور
+# این دستورات بهتر است در ابتدای فایل باشند.
+# از کلید جدیدی که ساخته‌اید استفاده کنید!
+SetEnv OPENAI_API_KEY "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"
+# ----------------------------------------------------
+
+
+# فعال کردن موتور بازنویسی URL
+RewriteEngine On
+
+# تنظیم مسیر پایه پروژه
+RewriteBase /clinic/
+
+# قانون برای حذف index.php از URL
+# اگر درخواست مستقیماً برای فایل index.php بود، کاربر را به ریشه پروژه ریدایرکت کن
+RewriteCond %{THE_REQUEST} \s/index\.php [NC]
+RewriteRule ^index\.php$ /clinic/ [R=301,L]
+
+# قوانین اصلی روتینگ (Front Controller)
+# اگر درخواست برای یک فایل یا پوشه واقعی نیست...
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+# ...تمام درخواست‌ها را به index.php بفرست تا توسط فریم‌ورک مدیریت شود
+RewriteRule . index.php [L]
