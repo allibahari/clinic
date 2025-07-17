@@ -221,14 +221,20 @@ $(document).ready(function() {
         };
     }
 
+    // --- FUNCTION FETCHUSERS CORRECTED ---
     function fetchUsers() {
         const form = $('#search-form');
+        
+        // 1. Read the form data FIRST
+        const formData = form.serialize() + '&ajax=true';
+
+        // 2. NOW, disable the inputs for better UX
         form.find(':input').prop('disabled', true);
         
         $.ajax({
             url: window.location.pathname, 
             type: 'GET',
-            data: form.serialize() + '&ajax=true',
+            data: formData, // 3. Use the stored form data
             success: function(response) {
                 $('#user-table-body').html(response);
             },
