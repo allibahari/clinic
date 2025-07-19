@@ -1,16 +1,17 @@
 <?php
-// ✨ راه حل ۱: فعال‌سازی صحیح سشن برای جلوگیری از خطا
-// فقط در صورتی سشن را استارت می‌زنیم که قبلاً شروع نشده باشد.
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+// اتصال به پایگاه داده
+require_once "config.php";
+$username = $_SESSION['username'] ?? 'مدیر';
+
+
 
 // نمایش خطاها برای دیباگ آسان‌تر
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-// اتصال به پایگاه داده
-require_once "config.php";
 
 // ✨ راه حل ۲: تعریف مسیر پایه برای هماهنگی با روتر
 // این ثابت باید فقط یک بار تعریف شود. بهتر است این کار در یک فایل مرکزی مثل index.php انجام شود.

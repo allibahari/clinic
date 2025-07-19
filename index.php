@@ -22,7 +22,7 @@ $routes = [
     '/doctors'          => ['file' => 'doctors.php',         'protected' => true],
     '/generate_invoice' => ['file' => 'generate_invoice.php','protected' => true],
     '/settings' => ['file' => 'settings.php', 'protected' => true],
-      '/reports' => ['file' => 'reports.php', 'protected' => true],
+     '/reports' => ['file' => 'reports.php', 'protected' => true],
 
     // مسیرهای مربوط به کلاینت (رزرو)
     '/booking' => ['file' => 'booking.php', 'protected' => false],

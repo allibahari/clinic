@@ -1,5 +1,10 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once "config.php";
+$username = $_SESSION['username'] ?? 'مدیر';
+
 
 // ------------ بخش PHP: خواندن اطلاعات کامل از دیتابیس ------------
 $sql = "SELECT id, full_name, specialty, address, profile_image_path FROM doctors ORDER BY id DESC";

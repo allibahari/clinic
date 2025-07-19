@@ -1,8 +1,16 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+// اتصال به پایگاه داده
+require_once "config.php";
+$username = $_SESSION['username'] ?? 'مدیر';
+
+
 // فایل‌های اصلی و نمایش خطا
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
-require_once "config.php";
+
 
 /**
  * ✨ تابع تبدیل تاریخ جایگزین شد تا به افزونه intl نیازی نباشد
