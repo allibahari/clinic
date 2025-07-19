@@ -120,8 +120,8 @@ if (class_exists('IntlDateFormatter')) {
                             <h4 class="text-sm font-semibold text-white"><?php echo htmlspecialchars($current_user['full_name']); ?></h4>
                             <p class="text-xs text-slate-400"><?php echo htmlspecialchars($current_user['username']); ?></p>
                         <?php else: ?>
-                            <h4 class="text-sm font-semibold text-white">کاربر مهمان</h4>
-                            <p class="text-xs text-slate-400">وارد نشده</p>
+                            <h4 class="text-sm font-semibold text-white"> <?php echo $username; ?></h4>
+                            <p class="text-xs text-slate-400">  <?php echo $jalali_date_time; ?> </p>
                         <?php endif; ?>
                     </div>
                     <a href="<?php echo htmlspecialchars($base_path); ?>/logout" title="خروج" class="text-slate-400 hover:text-red-500 transition-colors">
@@ -141,9 +141,7 @@ if (class_exists('IntlDateFormatter')) {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                 </button>
-                <div class="text-sm text-slate-500 font-medium">
-                    <?php echo $jalali_date_time; ?>
-                </div>
+        
             </header>
             
             <div class="mt-8">
