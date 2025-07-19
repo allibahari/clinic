@@ -7,10 +7,6 @@ error_reporting(E_ALL);
 // تعریف مسیر پایه پروژه
 define('BASE_PATH', '/clinic');
 
-/**
- * ✨ آرایه مسیرهای اصلاح شده
- * کلیدها ساده شده و مسیرهای تکراری/ناقص اصلاح شده‌اند.
- */
 $routes = [
     // مسیرهای اصلی و صفحات مدیریتی
     '/'                 => ['file' => 'dashboard.php',       'protected' => true], // صفحه اصلی برای کاربران لاگین کرده
@@ -46,10 +42,6 @@ $route_path = str_replace(BASE_PATH, '', $request_uri);
 if (empty($route_path)) {
     $route_path = '/';
 }
-
-
-// ✨ روتینگ اصلی ساده‌سازی شده
-// به جای استفاده از Regex، به سادگی چک می‌کنیم آیا مسیر در آرایه ما وجود دارد یا نه.
 // پارامترها (مثل id) مستقیماً توسط فایل‌ها با استفاده از $_GET['id'] خوانده می‌شوند.
 if (array_key_exists($route_path, $routes)) {
     $config = $routes[$route_path];
