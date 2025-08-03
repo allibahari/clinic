@@ -2,19 +2,13 @@
 header('Content-Type: application/json');
 require_once "../config.php";
 
+// توابع کمکی (بدون تغییر)
 function convertNumbersToEnglish($string) {
     $persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
     $arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
     return str_replace($persian, range(0, 9), str_replace($arabic, range(0, 9), $string));
 }
 
-/**
- * ✨ تابع جدید برای تبدیل تاریخ شمسی به میلادی
- * @param int $jy Jalali Year
- * @param int $jm Jalali Month
- * @param int $jd Jalali Day
- * @return array Gregorian Date [year, month, day]
- */
 function jalali_to_gregorian($jy, $jm, $jd) {
     $g_days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     $j_days_in_month = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
@@ -52,56 +46,77 @@ function jalali_to_gregorian($jy, $jm, $jd) {
 $response = ['success' => false, 'message' => 'درخواست نامعتبر.'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // دریافت اطلاعات
+    // 1. دریافت و پاکسازی ورودی‌ها
     $doctor_id = filter_input(INPUT_POST, 'doctor_id', FILTER_VALIDATE_INT);
-    $service_id = filter_input(INPUT_POST, 'service_id', FILTER_VALIDATE_INT); // ✨ دریافت فیلد جدید
-    $patient_name = trim($_POST['patient_name'] ?? '');
-    $patient_mobile = trim($_POST['patient_mobile'] ?? '');
-    $patient_national_code = trim($_POST['patient_national_code'] ?? ''); // ✨ دریافت فیلد جدید
-    $appointment_date_jalali = trim($_POST['appointment_date'] ?? '');
+    $service_id = filter_input(INPUT_POST, 'service_id', FILTER_VALIDATE_INT);
+    $patient_name = convertNumbersToEnglish(trim($_POST['patient_name'] ?? ''));
+    $patient_mobile = convertNumbersToEnglish(trim($_POST['patient_mobile'] ?? ''));
+    $patient_national_code = convertNumbersToEnglish(trim($_POST['patient_national_code'] ?? ''));
+    $appointment_date_jalali = convertNumbersToEnglish(trim($_POST['appointment_date'] ?? ''));
     $appointment_time = trim($_POST['appointment_time'] ?? '');
 
-    // تبدیل اعداد همه ورودی‌ها به انگلیسی
-    $patient_name = convertNumbersToEnglish($patient_name);
-    $patient_mobile = convertNumbersToEnglish($patient_mobile);
-    $patient_national_code = convertNumbersToEnglish($patient_national_code);
-    $appointment_date_jalali = convertNumbersToEnglish($appointment_date_jalali);
-
-    // ✨ تبدیل تاریخ شمسی به میلادی
+    // 2. تبدیل تاریخ شمسی به میلادی با فرمت صحیح
     $gregorian_date_str = '';
-    if (!empty($appointment_date_jalali)) {
+    if (!empty($appointment_date_jalali) && preg_match('/^\d{4}-\d{1,2}-\d{1,2}$/', $appointment_date_jalali)) {
         list($jy, $jm, $jd) = explode('-', $appointment_date_jalali);
         list($gy, $gm, $gd) = jalali_to_gregorian((int)$jy, (int)$jm, (int)$jd);
-        $gregorian_date_str = "$gy-$gm-$gd";
+        // ✨ رفع باگ: اطمینان از دو رقمی بودن ماه و روز
+        $gm_padded = str_pad($gm, 2, '0', STR_PAD_LEFT);
+        $gd_padded = str_pad($gd, 2, '0', STR_PAD_LEFT);
+        $gregorian_date_str = "$gy-$gm_padded-$gd_padded";
     }
+    $appointment_full_time = $gregorian_date_str . ' ' . $appointment_time . ':00';
 
-    $appointment_full_time = $gregorian_date_str . ' ' . $appointment_time;
-
-    // اعتبارسنجی
+    // 3. اعتبارسنجی داده‌ها
     if (!$doctor_id || !$service_id || empty($patient_name) || empty($patient_mobile) || empty($gregorian_date_str)) {
         $response['message'] = 'لطفا تمام فیلدهای ستاره‌دار را تکمیل کنید.';
         echo json_encode($response);
         exit;
     }
 
-    try {
-        // ✨ کوئری INSERT با فیلدهای جدید
-        $sql = "INSERT INTO appointments (doctor_id, service_id, patient_name, patient_mobile, patient_national_code, appointment_time, status) VALUES (?, ?, ?, ?, ?, ?, 'booked')";
-        $stmt = $conn->prepare($sql);
-        // ✨ বাইন্ড پارامترهای جدید
-        $stmt->bind_param("iissss", $doctor_id, $service_id, $patient_name, $patient_mobile, $patient_national_code, $appointment_full_time);
+    // ✨ رفع باگ: جلوگیری از ثبت نوبت در گذشته
+    date_default_timezone_set('Asia/Tehran');
+    if (strtotime($appointment_full_time) < time()) {
+        $response['message'] = 'امکان ثبت نوبت در تاریخ و زمان گذشته وجود ندارد.';
+        echo json_encode($response);
+        exit;
+    }
 
-        if ($stmt->execute()) {
-            $response['success'] = true;
-            $response['message'] = 'نوبت با موفقیت ثبت شد.';
+    // 4. استفاده از تراکنش برای جلوگیری از ثبت همزمان
+    $conn->begin_transaction();
+    try {
+        // ابتدا بررسی می‌کنیم که آیا این نوبت وجود دارد یا نه
+        $check_sql = "SELECT id FROM appointments WHERE doctor_id = ? AND appointment_time = ? FOR UPDATE";
+        $check_stmt = $conn->prepare($check_sql);
+        $check_stmt->bind_param("is", $doctor_id, $appointment_full_time);
+        $check_stmt->execute();
+        $result = $check_stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+             $conn->rollback();
+             $response['message'] = 'این ساعت به تازگی رزرو شده است. لطفا زمان دیگری را انتخاب کنید.';
         } else {
-            $response['message'] = ($conn->errno == 1062) ? 'این زمان برای پزشک انتخابی قبلا رزرو شده است.' : 'خطا در ثبت اطلاعات.';
+            // اگر وجود نداشت، آن را ثبت می‌کنیم
+            $sql = "INSERT INTO appointments (doctor_id, service_id, patient_name, patient_mobile, patient_national_code, appointment_time, status) VALUES (?, ?, ?, ?, ?, ?, 'booked')";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("iissss", $doctor_id, $service_id, $patient_name, $patient_mobile, $patient_national_code, $appointment_full_time);
+
+            if ($stmt->execute()) {
+                $conn->commit();
+                $response['success'] = true;
+                $response['message'] = 'نوبت با موفقیت ثبت شد.';
+            } else {
+                throw new Exception($conn->error);
+            }
+             $stmt->close();
         }
-        $stmt->close();
+        $check_stmt->close();
     } catch (Exception $e) {
+        $conn->rollback();
         $response['message'] = 'خطای سرور: ' . $e->getMessage();
     }
     $conn->close();
 }
 
 echo json_encode($response);
+?>

@@ -9,9 +9,9 @@ $username = $_SESSION['username'] ?? 'مدیر';
 date_default_timezone_set('Asia/Tehran');
 
 /**
- * تابع کامل برای تبدیل تاریخ و زمان میلادی به شمسی با اعداد فارسی
+ * تابع کامل برای تبدیل تاریخ و زمان میلادی به شمسی
  */
-function format_jalali_datetime($gregorian_datetime) {
+function format_jalali_datetime($gregorian_datetime, $use_persian_digits = true) {
     if (empty($gregorian_datetime)) return '---';
     try {
         $date_obj = new DateTime($gregorian_datetime);
@@ -34,8 +34,11 @@ function format_jalali_datetime($gregorian_datetime) {
     $jm = $i + 1; $jd = $j_day_no + 1;
     $jalali_date_part = "$jy/" . str_pad($jm, 2, '0', STR_PAD_LEFT) . "/" . str_pad($jd, 2, '0', STR_PAD_LEFT);
     $final_string = $jalali_date_part . ' ' . $time_part;
-    $persian_digits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-    return str_replace(range(0, 9), $persian_digits, $final_string);
+    if ($use_persian_digits) {
+        $persian_digits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        return str_replace(range(0, 9), $persian_digits, $final_string);
+    }
+    return $final_string;
 }
 
 // ۱. مدیریت تاریخ فعال برای فیلتر کردن
@@ -50,7 +53,6 @@ $sql_app = "SELECT app.*, doc.full_name as doctor_name
             JOIN doctors doc ON app.doctor_id = doc.id
             WHERE DATE(app.appointment_time) = ?
             ORDER BY app.appointment_time ASC";
-
 $stmt_app = $conn->prepare($sql_app);
 if ($stmt_app) {
     $stmt_app->bind_param("s", $active_date);
@@ -68,6 +70,13 @@ $services = $services_result ? $services_result->fetch_all(MYSQLI_ASSOC) : [];
 
 $status_map = ['booked' => ['text' => 'رزرو شده', 'class' => 'status-booked'],'arrived' => ['text' => 'حضور پیدا کرده', 'class' => 'status-arrived'],'in_room' => ['text' => 'در اتاق دکتر', 'class' => 'status-in-room'],'completed' => ['text' => 'اتمام کار', 'class' => 'status-completed'],'no_show' => ['text' => 'حضور پیدا نکرده', 'class' => 'status-no-show'],'cancelled' => ['text' => 'لغو شده', 'class' => 'status-cancelled']];
 $conn->close();
+
+// آماده‌سازی تاریخ برای نمایش در فیلد دیت‌پیکر
+$jalali_display_date = '';
+if (!in_array($active_date, [$today, $yesterday, $tomorrow])) {
+    $jalali_full = format_jalali_datetime($active_date . ' 00:00:00', false);
+    $jalali_display_date = explode(' ', $jalali_full)[0];
+}
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -92,54 +101,191 @@ $conn->close();
         .date-tab { background-color: #334155; color: #cbd5e1; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: all 0.2s; white-space: nowrap; }
         .date-tab:hover { background-color: #475569; }
         .date-tab.active { background-color: #3b82f6; color: white; font-weight: 600; }
-
-        /* انیمیشن‌های بارگذاری */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fadeInUp { animation: fadeInUp 0.5s ease-out forwards; }
         .table-row-animate { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+        select option:disabled { color: #94a3b8; text-decoration: line-through; background-color: #334155; }
 
-        /* استایل واضح‌تر برای گزینه‌های غیرفعال */
-        select option:disabled {
-            color: #94a3b8;
-            text-decoration: line-through;
+        /* --- START: Attractive Persian Datepicker Dark Theme --- */
+
+        /* 1. General styles for the POP-UP container */
+        .datepicker-container {
+            background-color: #1e293b; /* slate-800 */
+            border: 1px solid #334155; /* slate-700 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+            border-radius: 0.75rem; /* rounded-xl */
+        }
+
+        /* 2. Header: Month/Year title and navigation arrows */
+        .datepicker-container .pdp-header {
+            background-color: transparent;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .datepicker-container .pdp-header .pdp-month-name,
+        .datepicker-container .pdp-header .pdp-year-name {
+            color: #f1f5f9; /* slate-100 */
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+        .datepicker-container .pdp-header .pdp-month-name:hover,
+        .datepicker-container .pdp-header .pdp-year-name:hover {
+            color: #3b82f6; /* blue-500 */
+        }
+        .datepicker-container .pdp-header .pdp-nav-arrow {
+            background-color: #334155;
+            border-radius: 9999px;
+            width: 2rem;
+            height: 2rem;
+            transition: background-color 0.2s;
+        }
+        .datepicker-container .pdp-header .pdp-nav-arrow:hover {
+            background-color: #475569;
+        }
+        .datepicker-container .pdp-header .pdp-nav-arrow::before {
+            border-color: #94a3b8;
+        }
+
+        /* 3. Weekday names (شنبه, یکشنبه, etc.) */
+        .datepicker-container .pdp-week-day {
+            color: #64748b; /* slate-500 */
+            font-weight: 600;
+        }
+
+        /* 4. Individual day cells */
+        .datepicker-container .pdp-day {
+            color: #cbd5e1; /* slate-300 */
+            border-radius: 0.5rem;
+            transition: all 0.2s ease-in-out;
+            border: 2px solid transparent;
+        }
+        .datepicker-container .pdp-day:not(.pdp-day-disabled):not(.pdp-day-selected):hover {
+            background-color: #334155; /* slate-700 */
+            color: white;
+        }
+        .datepicker-container .pdp-day.pdp-day-today:not(.pdp-day-selected) {
+            border-color: #3b82f6; /* blue-500 */
+            color: #f1f5f9; /* slate-100 */
+        }
+        .datepicker-container .pdp-day.pdp-day-selected {
+            background-color: #3b82f6 !important;
+            color: white !important;
+            font-weight: 700;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        .datepicker-container .pdp-day.pdp-day-disabled {
+            color: #475569 !important;
+            background-color: transparent !important;
+            text-decoration: none;
+        }
+         .datepicker-container .pdp-day.pdp-day-disabled:hover {
+            cursor: not-allowed;
+        }
+
+        /* 5. Month/Year picker views */
+        .datepicker-container .pdp-month-container,
+        .datepicker-container .pdp-year-container {
+            background-color: #1e293b;
+        }
+        .datepicker-container .pdp-month,
+        .datepicker-container .pdp-year {
+            color: #cbd5e1;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        .datepicker-container .pdp-month:hover,
+        .datepicker-container .pdp-year:hover {
             background-color: #334155;
         }
+        .datepicker-container .pdp-month.pdp-month-selected,
+        .datepicker-container .pdp-year.pdp-year-selected {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        /* 6. Styles for the INLINE calendar in the modal */
+        #inline-datepicker-container .pdp-group {
+            border: none;
+            box-shadow: none;
+            background-color: transparent;
+        }
+        #inline-datepicker-container .pdp-header { background-color: transparent; color: #cbd5e1; }
+        #inline-datepicker-container .pdp-month-name,
+        #inline-datepicker-container .pdp-year-name { color: #f1f5f9; }
+        #inline-datepicker-container .pdp-nav-arrow:hover { background-color: #475569; }
+        #inline-datepicker-container .pdp-week-day { color: #64748b; font-weight: 500; }
+        #inline-datepicker-container .pdp-day { color: #cbd5e1; border-radius: 0.375rem; transition: all 0.2s; }
+        #inline-datepicker-container .pdp-day:not(.pdp-day-disabled):hover { background-color: #475569; color: white; }
+        #inline-datepicker-container .pdp-day.pdp-day-today:not(.pdp-day-selected) {
+            background-color: rgba(59, 130, 246, 0.2) !important;
+            color: white !important;
+            border: 1px solid #3b82f6;
+        }
+        #inline-datepicker-container .pdp-day.pdp-day-selected {
+            background-color: #3b82f6 !important;
+            color: white !important;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+        }
+        #inline-datepicker-container .pdp-day-disabled {
+            color: #475569 !important;
+            background-color: transparent !important;
+            text-decoration: none;
+            position: relative;
+        }
+        #inline-datepicker-container .pdp-day-disabled::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 15%;
+            right: 15%;
+            border-top: 1px solid #334155;
+        }
+        /* --- END: Datepicker Theme --- */
+
+        /* استایل برای دکمه‌های زمان */
+        #time-slots-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.75rem;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-top: 0.5rem;
+        }
+        .time-slot { background-color: #334155; color: #cbd5e1; padding: 0.75rem; border-radius: 0.5rem; text-align: center; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+        .time-slot:hover:not(.disabled) { background-color: #475569; color: white; }
+        .time-slot.selected { background-color: #3b82f6; color: white; font-weight: 600; border-color: #60a5fa; }
+        .time-slot.disabled { background-color: #1e293b; color: #475569; cursor: not-allowed; text-decoration: line-through; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-300 font-sans">
-
     <div class="flex flex-col md:flex-row min-h-screen">
         <?php include "inc/nav.php"; ?>
-
         <main class="flex-1 p-4 sm:p-6">
             <header class="flex justify-between items-center mb-6 animate-fadeInUp" style="animation-delay: 0.1s;">
                 <h1 class="text-3xl font-bold text-white">مدیریت نوبت‌ها</h1>
                 <button id="openBookingModalBtn" class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg text-white text-sm transition-colors">افزودن نوبت جدید</button>
             </header>
-
             <div class="bg-slate-800 p-3 rounded-xl shadow-lg mb-6 animate-fadeInUp" style="animation-delay: 0.2s;">
                 <div class="flex items-center gap-2 overflow-x-auto">
                     <a href="?date=<?php echo $yesterday; ?>" class="date-tab <?php echo ($active_date == $yesterday) ? 'active' : ''; ?>">دیروز</a>
                     <a href="?date=<?php echo $today; ?>" class="date-tab <?php echo ($active_date == $today) ? 'active' : ''; ?>">امروز</a>
                     <a href="?date=<?php echo $tomorrow; ?>" class="date-tab <?php echo ($active_date == $tomorrow) ? 'active' : ''; ?>">فردا</a>
                     <div class="relative">
-                        <input type="text" id="tab_date_picker_p" class="date-tab cursor-pointer <?php if (!in_array($active_date, [$today, $yesterday, $tomorrow])) echo 'active'; ?>" placeholder="انتخاب تاریخ..." readonly>
+                        <input type="text" id="tab_date_picker_p" 
+                               value="<?php echo $jalali_display_date; ?>" 
+                               placeholder="انتخاب تاریخ..." readonly
+                               class="date-tab cursor-pointer <?php if (!in_array($active_date, [$today, $yesterday, $tomorrow])) echo 'active'; ?>">
                     </div>
                 </div>
             </div>
-
             <div class="bg-slate-800 p-4 sm:p-6 rounded-xl shadow-lg animate-fadeInUp" style="animation-delay: 0.3s;">
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-slate-400 uppercase bg-slate-700/50">
                             <tr>
-                                <th scope="col" class="px-6 py-3">بیمار</th>
-                                <th scope="col" class="px-6 py-3">پزشک</th>
-                                <th scope="col" class="px-6 py-3">زمان نوبت</th>
-                                <th scope="col" class="px-6 py-3">وضعیت</th>
+                                <th scope="col" class="px-6 py-3">بیمار</th><th scope="col" class="px-6 py-3">پزشک</th>
+                                <th scope="col" class="px-6 py-3">زمان نوبت</th><th scope="col" class="px-6 py-3">وضعیت</th>
                                 <th scope="col" class="px-6 py-3 text-center">عملیات</th>
                             </tr>
                         </thead>
@@ -154,9 +300,7 @@ $conn->close();
                                         <td class="px-6 py-4 text-cyan-400"><?php echo format_jalali_datetime($app['appointment_time']); ?></td>
                                         <td class="px-6 py-4">
                                             <?php $status_display = $status_map[$app['status']] ?? ['text' => $app['status'], 'class' => '']; ?>
-                                            <span class="px-2 py-1 font-semibold text-xs rounded-full <?php echo $status_display['class']; ?>">
-                                                <?php echo htmlspecialchars($status_display['text']); ?>
-                                            </span>
+                                            <span class="px-2 py-1 font-semibold text-xs rounded-full <?php echo $status_display['class']; ?>"><?php echo htmlspecialchars($status_display['text']); ?></span>
                                         </td>
                                         <td class="px-6 py-4 text-center">
                                             <?php if ($app['status'] === 'completed'): ?>
@@ -186,14 +330,62 @@ $conn->close();
     </div>
 
     <div id="bookingModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden">
-        <div class="bg-slate-800 rounded-xl shadow-2xl p-8 w-full max-w-lg">
-            <div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold text-white">ثبت نوبت جدید</h2><button id="closeModalBtn" class="text-slate-400 hover:text-white text-3xl">&times;</button></div>
+        <div class="bg-slate-800 rounded-xl shadow-2xl p-8 w-full max-w-2xl"> <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white">ثبت نوبت جدید</h2>
+                <button id="closeModalBtn" class="text-slate-400 hover:text-white text-3xl">&times;</button>
+            </div>
             <form id="bookingForm" novalidate>
-                <div id="step1" class="modal-step active"><h3 class="text-lg font-semibold mb-4 text-cyan-400">مرحله ۱: انتخاب پزشک</h3><div class="space-y-3 max-h-64 overflow-y-auto"><?php if(!empty($doctors)): foreach($doctors as $doc): ?><label class="block"><input type="radio" name="doctor_id" value="<?php echo $doc['id']; ?>" class="hidden peer" required><div class="p-4 bg-slate-700 rounded-lg cursor-pointer hover:bg-slate-600 border-2 border-transparent peer-checked:border-blue-500 peer-checked:bg-blue-900/50 transition-all"><p class="font-semibold text-white"><?php echo htmlspecialchars($doc['full_name']); ?></p></div></label><?php endforeach; else: ?><p>پزشکی برای انتخاب وجود ندارد.</p><?php endif; ?></div></div>
-                <div id="step2" class="modal-step"><h3 class="text-lg font-semibold mb-4 text-cyan-400">مرحله ۲: اطلاعات بیمار و علت مراجعه</h3><div class="space-y-4"><div><label for="patient_name" class="block text-sm font-medium mb-1">نام و نام خانوادگی بیمار <span class="text-red-500">*</span></label><input type="text" id="patient_name" name="patient_name" required class="w-full bg-slate-700 p-2 rounded-md"></div><div><label for="patient_mobile" class="block text-sm font-medium mb-1">شماره موبایل <span class="text-red-500">*</span></label><input type="text" id="patient_mobile" name="patient_mobile" required class="w-full bg-slate-700 p-2 rounded-md" maxlength="11"></div><div><label for="patient_national_code" class="block text-sm font-medium mb-1">کد ملی</label><input type="text" id="patient_national_code" name="patient_national_code" class="w-full bg-slate-700 p-2 rounded-md" maxlength="10"></div><div><label for="service_id" class="block text-sm font-medium mb-1">علت مراجعه <span class="text-red-500">*</span></label><select id="service_id" name="service_id" required class="w-full bg-slate-700 p-2 rounded-md"><option value="">انتخاب کنید...</option><?php if(!empty($services)): foreach($services as $service): ?><option value="<?php echo $service['id']; ?>"><?php echo htmlspecialchars($service['name']); ?></option><?php endforeach; endif; ?></select></div></div></div>
-                <div id="step3" class="modal-step"><h3 class="text-lg font-semibold mb-4 text-cyan-400">مرحله ۳: انتخاب تاریخ و ساعت</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label for="appointment_date_p_modal" class="block text-sm font-medium mb-1">تاریخ نوبت <span class="text-red-500">*</span></label><input type="text" id="appointment_date_p_modal" readonly required class="w-full bg-slate-700 p-2 rounded-md cursor-pointer" placeholder="تاریخ را انتخاب کنید"><input type="hidden" id="appointment_date_g_modal" name="appointment_date"></div><div><label for="appointment_time" class="block text-sm font-medium mb-1">ساعت نوبت <span class="text-red-500">*</span></label><select id="appointment_time" name="appointment_time" required class="w-full bg-slate-700 p-2 rounded-md" disabled><option value="">انتخاب ساعت...</option><option value="09:00">09:00</option><option value="09:30">09:30</option><option value="10:00">10:00</option><option value="10:30">10:30</option><option value="11:00">11:00</option><option value="11:30">11:30</option><option value="12:00">12:00</option><option value="12:30">12:30</option><option value="16:00">16:00</option><option value="16:30">16:30</option><option value="17:00">17:00</option><option value="17:30">17:30</option></select></div></div></div>
+                <div id="step1" class="modal-step active">
+                    <h3 class="text-lg font-semibold mb-4 text-cyan-400">مرحله ۱: انتخاب پزشک</h3>
+                    <div class="space-y-3 max-h-64 overflow-y-auto">
+                        <?php if(!empty($doctors)): foreach($doctors as $doc): ?>
+                            <label class="block">
+                                <input type="radio" name="doctor_id" value="<?php echo $doc['id']; ?>" class="hidden peer" required>
+                                <div class="p-4 bg-slate-700 rounded-lg cursor-pointer hover:bg-slate-600 border-2 border-transparent peer-checked:border-blue-500 peer-checked:bg-blue-900/50 transition-all">
+                                    <p class="font-semibold text-white"><?php echo htmlspecialchars($doc['full_name']); ?></p>
+                                </div>
+                            </label>
+                        <?php endforeach; else: ?>
+                            <p>پزشکی برای انتخاب وجود ندارد.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div id="step2" class="modal-step">
+                    <h3 class="text-lg font-semibold mb-4 text-cyan-400">مرحله ۲: اطلاعات بیمار و علت مراجعه</h3>
+                    <div class="space-y-4">
+                        <div><label for="patient_name" class="block text-sm font-medium mb-1">نام و نام خانوادگی بیمار <span class="text-red-500">*</span></label><input type="text" id="patient_name" name="patient_name" required class="w-full bg-slate-700 p-2 rounded-md"></div>
+                        <div><label for="patient_mobile" class="block text-sm font-medium mb-1">شماره موبایل <span class="text-red-500">*</span></label><input type="text" id="patient_mobile" name="patient_mobile" required class="w-full bg-slate-700 p-2 rounded-md" maxlength="11"></div>
+                        <div><label for="patient_national_code" class="block text-sm font-medium mb-1">کد ملی</label><input type="text" id="patient_national_code" name="patient_national_code" class="w-full bg-slate-700 p-2 rounded-md" maxlength="10"></div>
+                        <div><label for="service_id" class="block text-sm font-medium mb-1">علت مراجعه <span class="text-red-500">*</span></label><select id="service_id" name="service_id" required class="w-full bg-slate-700 p-2 rounded-md"><option value="">انتخاب کنید...</option><?php if(!empty($services)): foreach($services as $service): ?><option value="<?php echo $service['id']; ?>"><?php echo htmlspecialchars($service['name']); ?></option><?php endforeach; endif; ?></select></div>
+                    </div>
+                </div>
+
+                <div id="step3" class="modal-step">
+                    <h3 class="text-lg font-semibold mb-2 text-cyan-400">مرحله ۳: انتخاب تاریخ و ساعت</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">تاریخ نوبت <span class="text-red-500">*</span></label>
+                            <div id="inline-datepicker-container" class="bg-slate-700/50 rounded-lg p-2"></div>
+                            <input type="hidden" id="appointment_date_g_modal" name="appointment_date" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">ساعت نوبت <span class="text-red-500">*</span></label>
+                            <div id="time-slots-container" class="mt-2">
+                                <p class="text-slate-400 text-sm">ابتدا تاریخ را انتخاب کنید...</p>
+                            </div>
+                            <input type="hidden" id="appointment_time_hidden" name="appointment_time" required>
+                        </div>
+                    </div>
+                </div>
             </form>
-            <div class="mt-8 flex justify-between items-center"><button id="backBtn" class="bg-slate-600 hover:bg-slate-700 px-6 py-2 rounded-lg text-white transition-colors invisible">قبلی</button><button id="nextBtn" class="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg text-white transition-colors">بعدی</button><button id="submitBtn" type="submit" form="bookingForm" class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg text-white transition-colors hidden">ثبت نوبت</button></div>
+            <div class="mt-8 flex justify-between items-center">
+                <button id="backBtn" class="bg-slate-600 hover:bg-slate-700 px-6 py-2 rounded-lg text-white transition-colors invisible">قبلی</button>
+                <button id="nextBtn" class="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg text-white transition-colors">بعدی</button>
+                <button id="submitBtn" type="submit" form="bookingForm" class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg text-white transition-colors hidden">ثبت نوبت</button>
+            </div>
         </div>
     </div>
     
@@ -221,111 +413,132 @@ $conn->close();
         }
 
         $(document).ready(function() {
-            const timeSelect = $('#appointment_time');
-            const modal = $('#bookingModal'), form = $('#bookingForm');
+            const modal = $('#bookingModal'),
+                  form = $('#bookingForm'),
+                  timeSlotsContainer = $('#time-slots-container'),
+                  hiddenTimeInput = $('#appointment_time_hidden');
             let currentStep = 1;
             const totalSteps = 3;
+
+            const clinicTimeSlots = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "16:00", "16:30", "17:00", "17:30"];
             
             function updateAvailableTimes() {
                 const doctorId = $('input[name="doctor_id"]:checked').val();
-                const date = $('#appointment_date_g_modal').val(); 
-                if (!doctorId || !date) {
-                    timeSelect.prop('disabled', true); return;
-                }
-                timeSelect.prop('disabled', true).find('option:first').text('در حال بارگذاری...');
+                const date = $('#appointment_date_g_modal').val();
+                
+                hiddenTimeInput.val('');
+                $('.time-slot').removeClass('selected');
+
+
+                if (!doctorId || !date) return;
+
+                timeSlotsContainer.html('<p class="text-slate-400 text-sm">در حال بارگذاری ساعات...</p>');
+
                 fetch(`api/get_available_times.php?doctor_id=${doctorId}&date=${date}`)
                     .then(response => response.json())
                     .then(data => {
+                        timeSlotsContainer.empty();
                         if (data.success) {
                             const bookedTimes = data.booked_times;
-                            timeSelect.find('option').not(':first').each(function() {
-                                const option = $(this);
-                                const timeValue = option.val();
-                                option.prop('disabled', false).text(timeValue);
-                                if (bookedTimes.includes(timeValue)) {
-                                    option.prop('disabled', true).text(`${timeValue} (رزرو شده)`);
-                                }
+                            clinicTimeSlots.forEach(time => {
+                                const isBooked = bookedTimes.includes(time);
+                                const timeSlotDiv = `<div class="time-slot ${isBooked ? 'disabled' : ''}" data-time="${time}">${time}</div>`;
+                                timeSlotsContainer.append(timeSlotDiv);
                             });
-                        } else { Swal.fire('خطا', 'مشکلی در دریافت ساعات در دسترس رخ داد.', 'error'); }
+                        } else {
+                            timeSlotsContainer.html('<p class="text-red-400 text-sm">خطا در دریافت ساعات.</p>');
+                            Swal.fire('خطا', 'مشکلی در دریافت ساعات در دسترس رخ داد.', 'error');
+                        }
                     })
-                    .catch(() => Swal.fire('خطای ارتباط', 'اتصال به سرور برای دریافت ساعات ممکن نبود.', 'error'))
-                    .finally(() => {
-                        timeSelect.prop('disabled', false).find('option:first').text('انتخاب ساعت...');
+                    .catch(() => {
+                        timeSlotsContainer.html('<p class="text-red-400 text-sm">خطای ارتباط با سرور.</p>');
+                        Swal.fire('خطای ارتباط', 'اتصال به سرور برای دریافت ساعات ممکن نبود.', 'error');
                     });
             }
+            
+            timeSlotsContainer.on('click', '.time-slot:not(.disabled)', function() {
+                const selectedTime = $(this).data('time');
+                $('.time-slot').removeClass('selected');
+                $(this).addClass('selected');
+                hiddenTimeInput.val(selectedTime);
+            });
 
             $('#tab_date_picker_p').persianDatepicker({
                 format: 'YYYY/MM/DD', autoClose: true,
                 onSelect: unix => window.location.href = `?date=${new persianDate(unix).format('YYYY-MM-DD')}`
             });
-            $('#appointment_date_p_modal').persianDatepicker({
-                format: 'YYYY/MM/DD', autoClose: true,
-                altField: '#appointment_date_g_modal', altFormat: 'YYYY-MM-DD',
-                minDate: new persianDate(), onSelect: updateAvailableTimes
-            });
+
+$('#inline-datepicker-container').persianDatepicker({
+    inline: true,
+    altField: '#appointment_date_g_modal',
+    altFormat: 'YYYY-MM-DD',
+    // ✨ تغییر اصلی اینجاست
+    minDate: new persianDate().startOf('day'), 
+    onSelect: function() {
+        updateAvailableTimes();
+    }
+});
+
             $('input[name="doctor_id"]').on('change', () => {
-                if ($('#appointment_date_g_modal').val()) updateAvailableTimes();
+                if ($('#appointment_date_g_modal').val()) {
+                    updateAvailableTimes();
+                }
             });
 
-            $('#openBookingModalBtn').on('click', function() { 
+            $('#openBookingModalBtn').on('click', function() {
                 form[0].reset();
-                timeSelect.prop('disabled', true).val('');
-                timeSelect.find('option').not(':first').each(function() {
-                    $(this).prop('disabled', false).text($(this).val());
-                });
-                currentStep = 1; 
-                showStep(currentStep); 
-                modal.removeClass('hidden'); 
+                currentStep = 1;
+                showStep(currentStep);
+                timeSlotsContainer.html('<p class="text-slate-400 text-sm">ابتدا تاریخ را انتخاب کنید...</p>');
+                hiddenTimeInput.val('');
+                $('.time-slot').removeClass('selected');
+                const pdp = $('#inline-datepicker-container').data('datepicker');
+                if (pdp) pdp.setDate(null);
+                 $('#appointment_date_g_modal').val('');
+                modal.removeClass('hidden');
             });
 
             $('#closeModalBtn').on('click', () => modal.addClass('hidden'));
             $('#nextBtn').on('click', () => { if (validateStep(currentStep) && currentStep < totalSteps) { showStep(++currentStep); } });
             $('#backBtn').on('click', () => { if (currentStep > 1) { showStep(--currentStep); } });
-            
-            function showStep(step) { 
-                $('.modal-step').removeClass('active'); 
-                $(`#step${step}`).addClass('active'); 
-                $('#backBtn').toggleClass('invisible', step === 1); 
-                $('#nextBtn').toggleClass('hidden', step === totalSteps); 
-                $('#submitBtn').toggleClass('hidden', step !== totalSteps); 
-            }
-            
-            function validateStep(step) { 
-                let isValid = true; 
-                $(`#step${step} [required]`).each(function() { 
-                    if (($(this).is(':radio') && !$(`input[name="${$(this).attr('name')}"]:checked`).length) || (!$(this).is(':radio') && !$(this).val())) { 
-                        isValid = false; return false; 
-                    } 
-                }); 
-                if (!isValid) Swal.fire('خطا', 'لطفا تمام فیلدهای ستاره‌دار را تکمیل کنید.', 'error'); 
-                return isValid; 
-            }
-            
-            form.on('submit', function(e) { 
-                e.preventDefault(); 
-                if (!validateStep(currentStep)) return; 
 
-                // ▼▼▼ لایه امنیتی جدید ▼▼▼
-                // بررسی نهایی برای اطمینان از اینکه زمان انتخاب شده غیرفعال نیست
-                const selectedTimeOption = timeSelect.find('option:selected');
-                if (selectedTimeOption.is(':disabled')) {
-                    Swal.fire('خطا!', 'این ساعت قبلا رزرو شده و قابل انتخاب نیست. لطفا یک ساعت دیگر انتخاب کنید.', 'error');
-                    return; // ارسال فرم متوقف می‌شود
-                }
-                // ▲▲▲ پایان لایه امنیتی ▲▲▲
+            function showStep(step) {
+                $('.modal-step').removeClass('active');
+                $(`#step${step}`).addClass('active');
+                $('#backBtn').toggleClass('invisible', step === 1);
+                $('#nextBtn').toggleClass('hidden', step === totalSteps);
+                $('#submitBtn').toggleClass('hidden', step !== totalSteps);
+            }
 
-                Swal.fire({ title: 'در حال ثبت نوبت...', allowOutsideClick: false, didOpen: () => Swal.showLoading() }); 
+            function validateStep(step) {
+                let isValid = true;
+                $(`#step${step} [required]`).each(function() {
+                    if (($(this).is(':radio') && !$(`input[name="${$(this).attr('name')}"]:checked`).length) || (!$(this).is(':radio') && !$(this).val())) {
+                        isValid = false;
+                        $(this).addClass('border-red-500').focus();
+                        setTimeout(() => $(this).removeClass('border-red-500'), 3000);
+                        return false;
+                    }
+                });
+                if (!isValid) Swal.fire('خطا', 'لطفا تمام فیلدهای ستاره‌دار را تکمیل کنید.', 'error');
+                return isValid;
+            }
+
+            form.on('submit', function(e) {
+                e.preventDefault();
+                if (!validateStep(currentStep)) return;
+
+                Swal.fire({ title: 'در حال ثبت نوبت...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                 fetch('api/create_appointment.php', { method: 'POST', body: new FormData(this) })
                     .then(res => res.json())
-                    .then(data => { 
-                        if (data.success) { 
-                            Swal.fire('موفقیت!', 'نوبت با موفقیت ثبت شد.', 'success').then(() => location.reload()); 
-                        } else { 
-                            // اگر به هر دلیلی (مثلا ثبت همزمان توسط کاربر دیگر) باز هم خطای دیتابیس رخ داد، آن را نمایش بده
-                            Swal.fire('خطا!', data.message || 'مشکلی در ثبت رخ داد.', 'error'); 
-                        } 
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire('موفقیت!', 'نوبت با موفقیت ثبت شد.', 'success').then(() => location.reload());
+                        } else {
+                            Swal.fire('خطا!', data.message || 'مشکلی در ثبت رخ داد.', 'error');
+                        }
                     })
-                    .catch(() => Swal.fire('خطای ارتباط!', 'لطفا اتصال اینترنت را بررسی کنید.', 'error')); 
+                    .catch(() => Swal.fire('خطای ارتباط!', 'لطفا اتصال اینترنت را بررسی کنید.', 'error'));
             });
         });
     </script>
