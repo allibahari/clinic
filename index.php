@@ -11,6 +11,7 @@ $routes = [
     // مسیرهای اصلی و صفحات مدیریتی
     '/'                 => ['file' => 'dashboard.php',       'protected' => true], // صفحه اصلی برای کاربران لاگین کرده
     '/login'            => ['file' => 'login.php',           'protected' => false],
+     '/register' => ['file' => 'register.php', 'protected' => true],
     '/logout'           => ['file' => 'logout.php',          'protected' => true],
     '/dashboard'        => ['file' => 'dashboard.php',       'protected' => true],
     '/users'            => ['file' => 'users.php',           'protected' => true],
