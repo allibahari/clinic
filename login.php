@@ -32,33 +32,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $conn->prepare("SELECT id, username, password FROM users WHERE username = ? LIMIT 1");
         $stmt->bind_param("s", $user_input);
         $stmt->execute();
+        $result = $stmt->get_result();
 
-        $stmt->store_result();
-        if ($stmt->num_rows === 1) {
-            $stmt->bind_result($id, $username, $hashed_password);
-            $stmt->fetch();
-
+        if ($result->num_rows === 1) {
+            $user = $result->fetch_assoc();
+            
             // مرحله ۳: بررسی رمز عبور
-            if (password_verify($pass_input, $hashed_password)) {
-
-                unset($_SESSION['captcha_code']);
-
-                session_regenerate_id(true);
+            if (password_verify($pass_input, $user['password'])) {
+                
+                // <<< اصلاح: کد امنیتی فقط پس از ورود موفق پاک می‌شود
+                unset($_SESSION['captcha_code']); 
+                
+                session_regenerate_id(true); // جلوگیری از حملات Session Fixation
                 $_SESSION['loggedin'] = true;
-                $_SESSION['user_id'] = $id;
-                $_SESSION['username'] = $username;
-
-                log_login($conn, $id);
-
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['username'] = $user['username'];
+                
+                log_login($conn, $user['id']);
+                
+                // ریدایرکت به آدرس تمیز داشبورد
                 header("Location: /clinic/dashboard");
-                exit;
+                exit; // خروج فوری برای جلوگیری از اجرای ادامه کد
             } else {
                 $error = "نام کاربری یا رمز عبور اشتباه است.";
             }
         } else {
             $error = "نام کاربری یا رمز عبور اشتباه است.";
         }
-
         $stmt->close();
     }
 }
