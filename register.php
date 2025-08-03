@@ -1,6 +1,14 @@
 <?php
-// فایل اتصال به دیتابیس را فراخوانی کنید
-require_once "config.php";
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// مرحله ۱: بررسی اینکه آیا کاربر از قبل لاگین کرده است یا خیر
+if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
+    // مرحله ۲: اگر کاربر لاگین کرده بود، او را به داشبورد منتقل کن
+    header("Location: /clinic/dashboard"); // آدرس داشبورد خود را وارد کنید
+    exit; // خروج فوری برای جلوگیری از اجرای ادامه کد
+}
 
 // فعال کردن نمایش خطا برای توسعه
 ini_set('display_errors', 1);
